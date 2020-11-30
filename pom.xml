@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
-    <groupId>com.javan</groupId>
-    <artifactId>showdocutil</artifactId>
+    <groupId>com.github.JavanFeng</groupId>
+    <artifactId>showDocUtil</artifactId>
     <version>0.0.1-beta</version>
-    <name>showdocutil</name>
+    <name>showDocUtil</name>
     <description>showdoc util project for Spring Boot</description>
 
     <properties>
