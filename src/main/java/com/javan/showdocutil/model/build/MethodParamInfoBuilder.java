@@ -1,8 +1,7 @@
 package com.javan.showdocutil.model.build;
 
-import com.javan.showdocutil.model.ParamFieldInfo;
 import com.javan.showdocutil.model.MethodParamInfo;
-import com.javan.showdocutil.test.UserController;
+import com.javan.showdocutil.model.ParamFieldInfo;
 import com.javan.showdocutil.util.BaseTypeUtil;
 import org.springframework.validation.annotation.Validated;
 
