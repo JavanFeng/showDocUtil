@@ -1,7 +1,5 @@
 package com.javan.showdocutil.util;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.annotation.Lookup;
@@ -28,6 +26,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Logger;
 
 /**
  * @Desc TODO
@@ -38,7 +37,7 @@ class ControllerClassPathScanner {
     /**
      * logger
      */
-    private static final Logger logger = LoggerFactory.getLogger(ControllerClassPathScanner.class);
+    private static final Logger logger = Logger.getLogger("ControllerClassPathScanner");
 
 
     static final String DEFAULT_RESOURCE_PATTERN = "**/*.class";
@@ -72,12 +71,8 @@ class ControllerClassPathScanner {
             String packageSearchPath = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
                     resolveBasePackage(basePackage) + '/' + this.resourcePattern;
             Resource[] resources = this.resourcePatternResolver.getResources(packageSearchPath);
-            boolean traceEnabled = logger.isTraceEnabled();
-            boolean debugEnabled = logger.isDebugEnabled();
             for (Resource resource : resources) {
-                if (traceEnabled) {
-                    logger.trace("Scanning " + resource);
-                }
+                logger.info("Scanning " + resource);
                 if (resource.isReadable()) {
                     try {
                         MetadataReader metadataReader = this.metadataReaderFactory.getMetadataReader(resource);
@@ -86,28 +81,20 @@ class ControllerClassPathScanner {
                             sbd.setResource(resource);
                             sbd.setSource(resource);
                             if (isCandidateComponent(sbd)) {
-                                if (debugEnabled) {
-                                    logger.debug("Identified candidate component class: " + resource);
-                                }
+                                logger.info("Identified candidate component class: " + resource);
                                 candidates.add(sbd);
                             } else {
-                                if (debugEnabled) {
-                                    logger.debug("Ignored because not a concrete top-level class: " + resource);
-                                }
+                                logger.info("Ignored because not a concrete top-level class: " + resource);
                             }
                         } else {
-                            if (traceEnabled) {
-                                logger.trace("Ignored because not matching any filter: " + resource);
-                            }
+                            logger.info("Ignored because not matching any filter: " + resource);
                         }
                     } catch (Throwable ex) {
                         throw new BeanDefinitionStoreException(
                                 "Failed to read candidate component class: " + resource, ex);
                     }
                 } else {
-                    if (traceEnabled) {
-                        logger.trace("Ignored because not readable: " + resource);
-                    }
+                    logger.info("Ignored because not readable: " + resource);
                 }
             }
         } catch (IOException ex) {

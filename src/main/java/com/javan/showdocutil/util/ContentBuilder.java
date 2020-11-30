@@ -1,7 +1,5 @@
 package com.javan.showdocutil.util;
 
-import sun.reflect.generics.tree.ReturnType;
-
 /**
  * @Desc TODO
  * @Author Javan Feng
@@ -13,9 +11,11 @@ class ContentBuilder {
 
     private String requestParam;
 
-    private String requestRetrun;
+    private String requestReturn;
 
     private String requestMethod;
+
+    private String example;
 
     private String[] requestUriPrefix;
 
@@ -38,8 +38,13 @@ class ContentBuilder {
         return this;
     }
 
+    public ContentBuilder withExample(String example) {
+        this.example = example;
+        return this;
+    }
+
     public ContentBuilder withRequestReturn(String requestRetrun) {
-        this.requestRetrun = requestRetrun;
+        this.requestReturn = requestRetrun;
         return this;
     }
 
@@ -83,7 +88,7 @@ class ContentBuilder {
         builder.append(System.lineSeparator());
         builder.append("|-|-|-|-");
         builder.append(System.lineSeparator());
-        builder.append(requestRetrun);
+        builder.append(requestReturn);
         builder.append("<br/><br/>");
         builder.append(System.lineSeparator());
         // 返回示例 暂无只生成模板
@@ -91,6 +96,7 @@ class ContentBuilder {
         builder.append(System.lineSeparator());
         builder.append("```");
         builder.append(System.lineSeparator());
+        builder.append(example);
         builder.append(System.lineSeparator());
         builder.append("```");
         return builder.toString();

@@ -2,6 +2,7 @@ package com.javan.showdocutil.util;
 
 import com.sun.javadoc.Type;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -11,7 +12,7 @@ import java.util.*;
  * @Author Javan Feng
  * @Date 2019 06 2019/6/25 22:47
  */
-class BaseTypeUtil {
+public class BaseTypeUtil {
     /**
      * base type
      */
@@ -24,6 +25,7 @@ class BaseTypeUtil {
 
     static {
         // base
+        BASETYPESET.add(BigDecimal.class.getName());
         BASETYPESET.add(String.class.getName());
         BASETYPESET.add(Integer.class.getName());
         BASETYPESET.add(Double.class.getName());
@@ -56,7 +58,15 @@ class BaseTypeUtil {
 
     // 是否是基础类型
     public static boolean isBaseType(String typeName) {
-        return BASETYPESET.contains(typeName);
+        return typeName.contains("java.lang")
+                || typeName.contains("java.util")
+                || typeName.contains("java.math")
+                || BASETYPESET.contains(typeName);
+    }
+
+    // 是否是基础类型
+    public static boolean isCollectionType(String typeName) {
+        return typeName.contains("java.util");
     }
 
 

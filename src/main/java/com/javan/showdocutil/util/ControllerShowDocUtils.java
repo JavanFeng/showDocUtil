@@ -1,16 +1,26 @@
 package com.javan.showdocutil.util;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.alibaba.fastjson.JSON;
+import com.javan.showdocutil.model.ControllerClassInfo;
+import com.javan.showdocutil.model.MethodInfo;
+import com.javan.showdocutil.model.MethodParamInfo;
+import com.javan.showdocutil.model.MethodReturnInfo;
+import com.javan.showdocutil.model.build.MethodParamInfoBuilder;
+import com.javan.showdocutil.model.build.MethodReturnInfoBuilder;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.bind.annotation.*;
+import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl;
+import uk.co.jemos.podam.api.PodamFactory;
+import uk.co.jemos.podam.api.PodamFactoryImpl;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.*;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -20,7 +30,7 @@ import java.util.stream.Collectors;
  */
 class ControllerShowDocUtils {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ControllerShowDocUtils.class);
+    private static final Logger LOGGER = java.util.logging.Logger.getLogger("ControllerShowDocUtils");
     /**
      * 扫描@Controller类
      */
@@ -30,7 +40,7 @@ class ControllerShowDocUtils {
     private static final Set<String> HAD_PARSED_CLASS_MAP = new HashSet<>();
 
     /**
-     * 扫描@Controller类
+     * loader
      */
     private static final ClassLoader CLASS_LOAD = ClassUtils.getDefaultClassLoader();
 
@@ -43,7 +53,7 @@ class ControllerShowDocUtils {
         List<ShowDocModel> showDocLists = new ArrayList<>();
         for (String className : classNames) {
             List<ShowDocModel> showDocModels = parseComment(className);
-            showDocLists.addAll(showDocLists);
+            showDocLists.addAll(showDocModels);
         }
 
         return showDocLists;
@@ -58,6 +68,7 @@ class ControllerShowDocUtils {
     // get content of text
     public static ShowDocModel getText(Class<?> aClass, String simpleMethodName) throws Exception {
         // clazz
+        System.out.println("正在读取Controller类信息....");
         if (isMatch(aClass)) {
             // 前缀
             String[] requestUriPrefix = getRequestUriPrefix(aClass);
@@ -66,10 +77,10 @@ class ControllerShowDocUtils {
             // 返回showdoc 所需信息
             Optional<MethodInfo> first = methods.stream().filter(methodInfo -> methodInfo.getMethod().getName().equals(simpleMethodName)).findFirst();
             if (!first.isPresent()) {
-                LOGGER.info("not found the methd[{}] in class [{}]", simpleMethodName, aClass.getName());
+                LOGGER.info(() -> "not found the methd[{" + simpleMethodName + "}] in class [{" + aClass.getName() + "}]");
                 return null;
             } else {
-                List<ShowDocModel> showDocModels = buildShowDocModelList(Arrays.asList(first.get()));
+                List<ShowDocModel> showDocModels = buildShowDocModelList(new ControllerClassInfo(Arrays.asList(first.get()), aClass));
                 if (!showDocModels.isEmpty()) {
                     return showDocModels.get(0);
                 }
@@ -82,6 +93,7 @@ class ControllerShowDocUtils {
     // parse the content
     private static List<ShowDocModel> parseComment(String className) throws Exception {
         // clazz
+        System.out.println("正在读取Controller类信息....");
         Class<?> aClass = CLASS_LOAD.loadClass(className);
         if (isMatch(aClass)) {
             // 前缀
@@ -89,13 +101,30 @@ class ControllerShowDocUtils {
             // method 信息
             List<MethodInfo> method = getRequestMethodAndUriSuffix(aClass, requestUriPrefix);
             // 返回showdoc 所需信息
-            return buildShowDocModelList(method);
+            return buildShowDocModelList(new ControllerClassInfo(method, aClass));
         }
 
         return Collections.emptyList();
     }
 
     // model
+    private static List<ShowDocModel> buildShowDocModelList(ControllerClassInfo classInfo) throws Exception {
+        List<MethodInfo> method = classInfo.getList();
+        if (method == null || method.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        System.out.println("开始进行Doclet解析.....");
+        parseShowDoc(classInfo);
+
+        List<ShowDocModel> list = new ArrayList<>();
+        for (MethodInfo methodInfo : method) {
+            list.add(getShowDocModel(methodInfo));
+        }
+        return list;
+    }
+
+  /*  // model
     private static List<ShowDocModel> buildShowDocModelList(List<MethodInfo> method) throws Exception {
         if (method == null || method.isEmpty()) {
             return Collections.emptyList();
@@ -107,7 +136,7 @@ class ControllerShowDocUtils {
         }
 
         return list;
-    }
+    }*/
 
 
     // method - suffix array
@@ -122,7 +151,7 @@ class ControllerShowDocUtils {
                 RequestMethod[] methods = requestMapping.method();
 
                 // uri suffix and method
-                if (methods == null || methods.length == 0) {
+                if (methods.length == 0) {
                     // is requestMapping default get and post
                     info.setRequestMethod("GET,POST");
                     info.setUrisSuffix(requestMapping.value());
@@ -135,9 +164,14 @@ class ControllerShowDocUtils {
 
                 // method
                 info.setMethod(method);
+                List<MethodParamInfo> methodParamInfos = MethodParamInfoBuilder.build(method);
+                info.setParams(methodParamInfos);
+                MethodReturnInfo returnInfo = MethodReturnInfoBuilder.build(method);
+                info.setReturnInfo(returnInfo);
                 // class
                 info.setSourceClass(aClass);
                 list.add(info);
+
             }
         }
         return list;
@@ -189,19 +223,19 @@ class ControllerShowDocUtils {
         switch (requestMethod) {
             case GET:
                 GetMapping getMapping = AnnotationUtils.findAnnotation(method, GetMapping.class);
-                return getAnnotaionRequestMappingVaule(getMapping);
+                return getAnnotationRequestMappingVale(getMapping);
             case POST:
                 PostMapping postMapping = AnnotationUtils.findAnnotation(method, PostMapping.class);
-                return getAnnotaionRequestMappingVaule(postMapping);
+                return getAnnotationRequestMappingVale(postMapping);
             case PUT:
                 PutMapping putMapping = AnnotationUtils.findAnnotation(method, PutMapping.class);
-                return getAnnotaionRequestMappingVaule(putMapping);
+                return getAnnotationRequestMappingVale(putMapping);
             case PATCH:
                 PatchMapping patchMapping = AnnotationUtils.findAnnotation(method, PatchMapping.class);
-                return getAnnotaionRequestMappingVaule(patchMapping);
+                return getAnnotationRequestMappingVale(patchMapping);
             case DELETE:
-                GetMapping annotation = AnnotationUtils.findAnnotation(method, GetMapping.class);
-                return getAnnotaionRequestMappingVaule(annotation);
+                DeleteMapping annotation = AnnotationUtils.findAnnotation(method, DeleteMapping.class);
+                return getAnnotationRequestMappingVale(annotation);
             default:
                 LOGGER.info("not support method,may met a problem with this program");
                 return new String[0];
@@ -210,75 +244,23 @@ class ControllerShowDocUtils {
     }
 
     // requestMapping value
-    private static String[] getAnnotaionRequestMappingVaule(Annotation annotation) {
+    private static String[] getAnnotationRequestMappingVale(Annotation annotation) {
         if (annotation != null) {
             return (String[]) AnnotationUtils.getValue(annotation);
         }
         return new String[0];
     }
 
-
-    static class MethodInfo {
-
-        private String requestMethod;
-
-        private String[] urisSuffix;
-
-        private String[] uriPrefix;
-
-        private Class<?> sourceClass;
-
-        private Method method;
-
-        public String getRequestMethod() {
-            return requestMethod;
-        }
-
-        public void setRequestMethod(String requestMethod) {
-            this.requestMethod = requestMethod;
-        }
-
-        public Method getMethod() {
-            return method;
-        }
-
-        public void setMethod(Method method) {
-            this.method = method;
-        }
-
-        public String[] getUrisSuffix() {
-            return urisSuffix;
-        }
-
-        public void setUrisSuffix(String[] urisSuffix) {
-            this.urisSuffix = urisSuffix;
-        }
-
-        public Class<?> getSourceClass() {
-            return sourceClass;
-        }
-
-        public void setSourceClass(Class<?> sourceClass) {
-            this.sourceClass = sourceClass;
-        }
-
-        public String[] getUriPrefix() {
-            return uriPrefix;
-        }
-
-        public void setUriPrefix(String[] uriPrefix) {
-            this.uriPrefix = uriPrefix;
+    // generate showdoc
+    private static void parseShowDoc(ControllerClassInfo controllerClassInfo) throws Exception {
+        if (!HAD_PARSED_CLASS_MAP.contains(controllerClassInfo.getClass().getTypeName())) {
+            // do parse
+            JavaDocReader.parse(controllerClassInfo);
+            HAD_PARSED_CLASS_MAP.add(controllerClassInfo.getControllerClazz().getTypeName());
         }
     }
 
-
-    // generate showdoc
-    private static ShowDocModel parseShowDoc(MethodInfo methodInfo) throws Exception {
-        if (!HAD_PARSED_CLASS_MAP.contains(methodInfo.getSourceClass().getTypeName())) {
-            // do parse
-            JavaDocReader.parse(methodInfo.getSourceClass().getTypeName());
-            HAD_PARSED_CLASS_MAP.add(methodInfo.getSourceClass().getTypeName());
-        }
+    private static ShowDocModel getShowDocModel(MethodInfo methodInfo) throws Exception {
         // floder
         String floder = JavaDocReader.getFolder(methodInfo.getSourceClass().getTypeName());
 
@@ -292,13 +274,32 @@ class ControllerShowDocUtils {
         // return model info
         String returnStr = JavaDocReader.getReturn(methodName);
         // example ,often a postman result,template:
+        // TODO 生成的插件不行
+        Class<?> clazz = methodInfo.getReturnInfo().getClazz();
+        Type genericReturnType = methodInfo.getReturnInfo().getType();
+        PodamFactory factory = new PodamFactoryImpl();
+        Object user;
+        if (genericReturnType instanceof ParameterizedTypeImpl) {
+            user = factory.manufacturePojo(clazz, ((ParameterizedTypeImpl) genericReturnType).getActualTypeArguments());
+        } else {
+            user = factory.manufacturePojo(clazz, String.class);
+        }
+        String resultJson = JSON.toJSONString(user, true);
         String content = ContentBuilder.newBuild().withRequestMethod(requestMethod).withRequestParam(param)
                 .withRequestReturn(returnStr).withTitle(title).withRequestUriPrefix(methodInfo.getUriPrefix())
-                .withRequestUriSuffix(methodInfo.getUrisSuffix()).build();
+                .withRequestUriSuffix(methodInfo.getUrisSuffix())
+                .withExample(resultJson)
+                .build();
         ShowDocModel showDocModel = new ShowDocModel();
         showDocModel.setTitle(title);
         showDocModel.setFolder(floder);
         showDocModel.setContent(content);
         return showDocModel;
     }
+
+    /*public static void main(String[] args) {
+        Object mock = JMockData.mock(User.class);
+        String resultJson =JsonUtil.toJsonString(mock);
+        System.out.println(resultJson);
+    }*/
 }

@@ -1,5 +1,8 @@
 package com.javan.showdocutil.util;
 
+import com.javan.showdocutil.model.IParam;
+import com.javan.showdocutil.model.MethodInfo;
+import com.javan.showdocutil.model.MethodInfoThreadLocal;
 import com.sun.javadoc.*;
 
 import java.util.Arrays;
@@ -9,7 +12,7 @@ import java.util.Arrays;
  * @Author Javan Feng
  * @Date 2019 06 2019/6/25 21:37
  */
- class JavaDocTextUtil {
+class JavaDocTextUtil {
     private static RootDoc root;
 
     // 一个简单Doclet,收到 RootDoc对象保存起来供后续使用
@@ -32,35 +35,36 @@ import java.util.Arrays;
 
     // 获取实体类
     // https://docs.oracle.com/javase/7/docs/technotes/tools/windows/javadoc.html#sourcepath
-    public static String getModelText(String typeName, String prefix) throws Exception {
-        return getModelText(typeName, null, prefix);
+    public static String getModelText(String typeName, String prefix, IParam iParam) throws Exception {
+        return getModelText(typeName, null, prefix, iParam);
     }
 
     // 获取实体类
     // https://docs.oracle.com/javase/7/docs/technotes/tools/windows/javadoc.html#sourcepath
-    private static String getModelText(String typeName, StringBuilder build, String prefix) throws Exception {
-        // workplace
-        String workplace = System.getProperty("user.dir");
+    private static String getModelText(String typeName, StringBuilder build, String prefix, IParam paramByName) throws Exception {
+
+        Class<?> paramterClass = paramByName.getParamterClass();
         // classPatch
-        String s = JavaDocTextUtil.class.getResource("/").getPath();
+        String s = paramterClass.getProtectionDomain().getCodeSource().getLocation().getPath();
         String classPath = s.substring(1, s.length() - 1);
         // package 2 path
-        String path = typeName.replace(".", "\\\\");
+        String workplace = classPath.replace("/target/classes", "");
+        String path = paramterClass.getTypeName().replace(".", "/");
         com.sun.tools.javadoc.Main.execute(new String[]{"-doclet",
                 JavaDocTextUtil.Doclet.class.getName(),
                 "-quiet",
                 "-private",
                 "-Xmaxerrs", "1",
                 "-encoding", "utf-8",
-                "-classpath",
-                classPath,
+                /*  "-classpath",
+                  classPath,*/
 // 获取单个代码文件FaceLogDefinition.java的javadoc
-                workplace + "\\src\\main\\java\\" + path + ".java"});
+                workplace + "/src/main/java/" + path + ".java"});
         //"D:\\workspace\\hello-world-spring-boot\\src\\main\\java\\com\\study\\h\\controller\\GreanStanardProjectDTO.java"});
-        return doGetModelText(typeName, build, prefix);
+        return doGetModelText(typeName, build, prefix, paramByName);
     }
 
-    private static String doGetModelText(String typeName, StringBuilder builder, String prefix) throws Exception {
+    private static String doGetModelText(String typeName, StringBuilder builder, String prefix, IParam paramByName) throws Exception {
         if (builder == null) {
             builder = new StringBuilder();
         }
@@ -73,13 +77,15 @@ import java.util.Arrays;
             String comment = field.commentText();
             Type type = field.type();
             String ty = field.type().qualifiedTypeName();
+            String fieldFullName = field.qualifiedName();
             // 基础
             // base type
             builder.append("|");
             builder.append(prefix);
             builder.append(name);
             builder.append("|");
-            builder.append("y");
+            IParam iparamByName = paramByName.getIparamByName(fieldFullName);
+            builder.append(iparamByName == null ? "" : (iparamByName.getRequired() == null) ? "" : iparamByName.getRequired().toString());
             builder.append("|");
             builder.append(BaseTypeUtil.getActualTypeName(type));
             builder.append("|");
@@ -90,13 +96,13 @@ import java.util.Arrays;
                 // 不是基础类型 ，需要再添加额外的字段
                 ParameterizedType parameterizedType = type.asParameterizedType();
                 boolean flag = false;
-                String newPrefix;
+                IParam fieldParam = paramByName.getIparamByName(type.simpleTypeName());
                 if (parameterizedType != null) {
                     // 有汎型
                     flag = true;
-                    JavaDocReader.doParseType(new Type[]{type}, builder, prefix, flag);
+                    JavaDocReader.doParseType(new Type[]{type}, builder, prefix, flag, fieldParam, true);
                 } else {
-                    JavaDocReader.doParseType(new Type[]{type}, builder, prefix + PrefixMark.PREFIX, flag);
+                    JavaDocReader.doParseType(new Type[]{type}, builder, prefix + PrefixMark.PREFIX, flag, fieldParam, false);
                 }
             }
         }

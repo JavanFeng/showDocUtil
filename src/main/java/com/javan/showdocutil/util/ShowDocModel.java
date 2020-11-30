@@ -1,8 +1,6 @@
 package com.javan.showdocutil.util;
 
 
-import java.util.List;
-
 /**
  * showdoc实体
  * @Desc showdoc model

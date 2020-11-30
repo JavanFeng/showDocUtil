@@ -1,11 +1,17 @@
 package com.javan.showdocutil.util;
 
+import com.alibaba.fastjson.JSONObject;
+import org.springframework.http.*;
 import org.springframework.util.Assert;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.List;
 
@@ -23,6 +29,9 @@ public class ShowDocWorkUtil {
     private static final String REMOTE_ADDRESS_SUFFIX_2 = "/server/api/item/updateByApi";
 
     private static final String OFFICAL_DOMAIN = "www.showdoc.cc";
+    private static final String OFFICAL_DOMAIN2 = "www.showdoc.com.cn";
+
+    private static final RestTemplate TEMPLATE = new RestTemplate();
     /**
      * 控制台打印
      */
@@ -35,9 +44,9 @@ public class ShowDocWorkUtil {
     private String addressSuffix;
 
     /**
-     * 更新远程
+     * 更新远程, catalog : 目录1/目录2/
      */
-    private String remoteDodmin, apiKey, apiToken;
+    private String remoteDodmin, apiKey, apiToken, catalog;
 
     private ShowDocWorkUtil() {
     }
@@ -49,6 +58,17 @@ public class ShowDocWorkUtil {
 
     public ShowDocWorkUtil withConsolePrint() {
         consolePrint = true;
+        return this;
+    }
+
+    /**
+     * 目录
+     *
+     * @param catalog 格式： 目录1/目录2
+     * @return
+     */
+    public ShowDocWorkUtil withInCatalog(String catalog) {
+        this.catalog = catalog;
         return this;
     }
 
@@ -64,7 +84,7 @@ public class ShowDocWorkUtil {
     }
 
     private void setDomain(String domain) {
-        if (OFFICAL_DOMAIN.equals(domain)) {
+        if (OFFICAL_DOMAIN.equals(domain) || OFFICAL_DOMAIN2.equals(domain)) {
             addressSuffix = REMOTE_ADDRESS_SUFFIX_2;
         } else {
             addressSuffix = REMOTE_ADDRESS_SUFFIX_1;
@@ -117,45 +137,39 @@ public class ShowDocWorkUtil {
 
 
     private void doUpdateRemote(List<ShowDocModel> text) throws IOException {
-        URL url = new URL(REMOTE_ADDRESS_PREFIX + remoteDodmin + addressSuffix);
+        String urlStr = REMOTE_ADDRESS_PREFIX + remoteDodmin + addressSuffix;
+        String cata = catalog;
+        if (cata != null) {
+            if (!cata.endsWith("\\")) {
+                cata = cata + "\\";
+            }
+        } else {
+            cata = "";
+        }
         for (ShowDocModel showDocModel : text) {
-
-            String folder = showDocModel.getFolder();
+            String folder = cata + showDocModel.getFolder();
             String title = showDocModel.getTitle();
             String content = showDocModel.getContent();
-            connect(url, folder, title, content);
+            connect(urlStr, folder, title, content);
         }
     }
 
-    private void connect(URL url, String folder, String title, String content) throws IOException {
-        //得到connection对象。
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        //设置请求方式
-        connection.setRequestMethod("POST");
-        connection.setDoOutput(true);
-        connection.setDoInput(true);
-        connection.setUseCaches(false);
-        connection.setConnectTimeout(5000);
-        connection.setReadTimeout(5000);
-        connection.connect();
-        try {
-            // body
-            String body = "api_key=" + apiKey + "&api_token=" + apiToken + "&cat_name=" + folder +
-                    "&page_title=" + title + "&page_content=" + content;
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream(), "UTF-8"));
-            writer.write(body);
-            writer.close();
-            //得到响应码
-            int responseCode = connection.getResponseCode();
-            //将响应流转换成字符串
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                String result = convert2String(connection);
-                System.out.println("更新结果：" + result);
-            } else {
-                System.out.println("请求错误,HTTP_CODE:" + responseCode + ",信息：" + connection.getResponseMessage());
-            }
-        } finally {
-            connection.disconnect();
+    private void connect(String url, String folder, String title, String content) throws IOException {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<String, String>();
+        params.add("api_key", apiKey);
+        params.add("api_token", apiToken);
+        params.add("cat_name", folder);
+        params.add("page_content", content);
+        params.add("title", title);
+        HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(params, headers);
+        ResponseEntity<String> response = TEMPLATE.exchange(url, HttpMethod.POST, requestEntity, String.class);
+        HttpStatus statusCode = response.getStatusCode();
+        if (statusCode == HttpStatus.OK) {
+            System.out.println("更新结果：" + response.getBody());
+        } else {
+            System.out.println("请求错误,HTTP_CODE:" + response.getStatusCodeValue() + ",信息：" + response.getBody());
         }
     }
 
@@ -171,8 +185,16 @@ public class ShowDocWorkUtil {
     }
 
     private void doConsolePrint(List<ShowDocModel> text) {
+        String cata = catalog;
+        if (cata != null) {
+            if (!cata.endsWith("\\")) {
+                cata = cata + "\\";
+            }
+        } else {
+            cata = "";
+        }
         for (ShowDocModel showDocModel : text) {
-            String folder = showDocModel.getFolder();
+            String folder = catalog + showDocModel.getFolder();
             String title = showDocModel.getTitle();
             String content = showDocModel.getContent();
             System.out.println("目录名：" + folder);
