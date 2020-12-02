@@ -1,5 +1,6 @@
 package com.javan.showdocutil.util;
 
+import com.sun.javadoc.ParameterizedType;
 import com.sun.javadoc.Type;
 
 import java.math.BigDecimal;
@@ -59,9 +60,10 @@ public class BaseTypeUtil {
     // 是否是基础类型
     public static boolean isBaseType(String typeName) {
         return typeName.contains("java.lang")
-                || typeName.contains("java.util")
+                || typeName.contains("java.util.Date")
                 || typeName.contains("java.math")
-                || BASETYPESET.contains(typeName);
+                || BASETYPESET.contains(typeName)
+                ;
     }
 
     // 是否是基础类型
@@ -72,6 +74,14 @@ public class BaseTypeUtil {
 
     // 是否是基础类型
     public static String getActualTypeName(Type type) {
+        if (isCollectionType(type.qualifiedTypeName())){
+            ParameterizedType parameterizedType = type.asParameterizedType();
+            if (parameterizedType!=null){
+                if (isBaseType(parameterizedType.typeArguments()[0].qualifiedTypeName())){
+                    return parameterizedType.typeArguments()[0].typeName()+"[]";
+                }
+            }
+        }
         return COLLECTIONS_TYPE.getOrDefault(type.qualifiedTypeName(), type.typeName());
     }
 

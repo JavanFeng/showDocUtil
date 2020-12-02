@@ -11,7 +11,7 @@
 
     <groupId>com.github.JavanFeng</groupId>
     <artifactId>showDocUtil</artifactId>
-    <version>0.0.1-beta</version>
+    <version>1.0.0-cfb-SNAPSHOT</version>
     <name>showDocUtil</name>
     <url>https://github.com/JavanFeng/showDocUtil</url>
     <description>showdoc util project for Spring Boot</description>
@@ -33,17 +33,17 @@
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
             <version>1.2.73</version>
-            <scope>provided</scope>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
-            <scope>provided</scope>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-            <scope>provided</scope>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.sun</groupId>
@@ -53,9 +53,23 @@
             <systemPath>${java.home}/../lib/tools.jar</systemPath>
             <!-- <systemPath>D:/software/JDK/java8/jdk1.8.0_141/lib/tools.jar</systemPath>-->
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-freemarker</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.16.22</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>5.5.1</version>
+        </dependency>
     </dependencies>
 
-   <!-- <build>
+   <build>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -91,5 +105,16 @@
                 </configuration>
             </plugin>
         </plugins>
-    </build>-->
+    </build>
+
+    <distributionManagement>
+        <repository>
+            <id>fingard_rdp_escp_hosted_releases</id>
+            <url>http://ats.fingard.net:9561/nexus/content/repositories/fingard_rdp_escp_hosted_releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>fingard_rdp_escp_hosted_snapshots</id>
+            <url>http://ats.fingard.net:9561/nexus/content/repositories/fingard_rdp_escp_hosted_snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
 </project>

@@ -1,5 +1,6 @@
 package com.javan.showdocutil.util;
 
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
 import com.javan.showdocutil.model.ControllerClassInfo;
 import com.javan.showdocutil.model.MethodInfo;
@@ -80,7 +81,7 @@ class ControllerShowDocUtils {
                 LOGGER.info(() -> "not found the methd[{" + simpleMethodName + "}] in class [{" + aClass.getName() + "}]");
                 return null;
             } else {
-                List<ShowDocModel> showDocModels = buildShowDocModelList(new ControllerClassInfo(Arrays.asList(first.get()), aClass));
+                List<ShowDocModel> showDocModels = buildShowDocModelList(new ControllerClassInfo(Collections.singletonList(first.get()), aClass));
                 if (!showDocModels.isEmpty()) {
                     return showDocModels.get(0);
                 }
@@ -261,12 +262,12 @@ class ControllerShowDocUtils {
     }
 
     private static ShowDocModel getShowDocModel(MethodInfo methodInfo) throws Exception {
-        // floder
-        String floder = JavaDocReader.getFolder(methodInfo.getSourceClass().getTypeName());
+        // folder
+        String folder = JavaDocReader.getFolder(methodInfo.getSourceClass().getTypeName());
 
         String methodName = methodInfo.getSourceClass().getTypeName() + "." + methodInfo.getMethod().getName();
         // title-
-        String title = JavaDocReader.getTitle(methodName);
+        String title = folder + "-" + JavaDocReader.getTitle(methodName);
         // method
         String requestMethod = methodInfo.getRequestMethod();
         //  request param
@@ -274,32 +275,60 @@ class ControllerShowDocUtils {
         // return model info
         String returnStr = JavaDocReader.getReturn(methodName);
         // example ,often a postman result,template:
-        // TODO 生成的插件不行
-        Class<?> clazz = methodInfo.getReturnInfo().getClazz();
-        Type genericReturnType = methodInfo.getReturnInfo().getType();
-        PodamFactory factory = new PodamFactoryImpl();
-        Object user;
-        if (genericReturnType instanceof ParameterizedTypeImpl) {
-            user = factory.manufacturePojo(clazz, ((ParameterizedTypeImpl) genericReturnType).getActualTypeArguments());
-        } else {
-            user = factory.manufacturePojo(clazz, String.class);
-        }
-        String resultJson = JSON.toJSONString(user, true);
-        String content = ContentBuilder.newBuild().withRequestMethod(requestMethod).withRequestParam(param)
-                .withRequestReturn(returnStr).withTitle(title).withRequestUriPrefix(methodInfo.getUriPrefix())
-                .withRequestUriSuffix(methodInfo.getUrisSuffix())
-                .withExample(resultJson)
+        String reqJson = getBeanJSon(methodInfo.getParams().get(0).getParamterClass(),null);
+        String respJson = getBeanJSon(methodInfo.getReturnInfo().getClazz(),methodInfo.getReturnInfo().getType());
+
+//        buildUrl(requestUriPrefix, requestUriSuffix)
+//        String content = ContentBuilder.newBuild().withRequestMethod(requestMethod).withRequestParam(param)
+//                .withRequestReturn(returnStr).withTitle(title).withRequestUriPrefix(methodInfo.getUriPrefix())
+//                .withRequestUriSuffix(methodInfo.getUrisSuffix())
+//                .withExample(resultJson)
+//                .build();
+        ContentBuilder contentBuilder = ContentBuilder.builder()
+                .requestMethod(requestMethod).reqParam(param)
+                .respVO(returnStr).title(title).requestUrl(buildUrl(methodInfo.getUriPrefix(), methodInfo.getUrisSuffix()))
+                .reqExample(reqJson)
+                .respExample(respJson)
                 .build();
+        String content = GenerateFactory.generateApiContent(contentBuilder);
         ShowDocModel showDocModel = new ShowDocModel();
         showDocModel.setTitle(title);
-        showDocModel.setFolder(floder);
+        showDocModel.setFolder(folder);
         showDocModel.setContent(content);
         return showDocModel;
     }
 
-    /*public static void main(String[] args) {
-        Object mock = JMockData.mock(User.class);
-        String resultJson =JsonUtil.toJsonString(mock);
-        System.out.println(resultJson);
-    }*/
+    private static String getBeanJSon(Class<?> clazz,Type genericReturnType){
+        PodamFactory factory = new PodamFactoryImpl();
+        Object bean;
+        if (genericReturnType instanceof ParameterizedTypeImpl) {
+            bean = factory.manufacturePojo(clazz, ((ParameterizedTypeImpl) genericReturnType).getActualTypeArguments());
+        } else {
+            bean = factory.manufacturePojo(clazz, String.class);
+        }
+        return JSON.toJSONString(bean, true);
+    }
+
+    private static String buildUrl(String[] requestUriPrefix, String[] requestUriSuffix) {
+
+        String apiHttpPrefix = ShowDocWorkUtil.API_HTTP_PREFIX;
+        if (StrUtil.isBlank(apiHttpPrefix)) {
+            apiHttpPrefix = "";
+        }
+
+        if (requestUriPrefix == null || requestUriPrefix.length == 0) {
+            requestUriPrefix = new String[]{""};
+        }
+        StringBuilder build = new StringBuilder();
+        for (String uriPrefix : requestUriPrefix) {
+            for (String uriSuffix : requestUriSuffix) {
+                build.append(apiHttpPrefix);
+                build.append(uriPrefix);
+                build.append(uriSuffix);
+                build.append(",");
+            }
+        }
+        return build.substring(0,build.length()-1);
+    }
+
 }
