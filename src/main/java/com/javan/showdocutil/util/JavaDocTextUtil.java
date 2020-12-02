@@ -157,6 +157,9 @@ class JavaDocTextUtil {
         } else {
             JavaDocReader.doParseType(new Type[]{type}, ext, "", false, fieldParam, false,paramType);
         }
+        if (StrUtil.isBlank(ext)) {
+            return;
+        }
         Map<String,String> map = new HashMap<>();
         map.put("paramTypeName",paramType.getLabel());
         map.put("extParam",ext.toString());

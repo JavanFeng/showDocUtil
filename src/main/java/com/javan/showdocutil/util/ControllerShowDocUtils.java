@@ -1,5 +1,6 @@
 package com.javan.showdocutil.util;
 
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
 import com.javan.showdocutil.model.ControllerClassInfo;
@@ -275,15 +276,12 @@ class ControllerShowDocUtils {
         // return model info
         String returnStr = JavaDocReader.getReturn(methodName);
         // example ,often a postman result,template:
-        String reqJson = getBeanJSon(methodInfo.getParams().get(0).getParamterClass(),null);
-        String respJson = getBeanJSon(methodInfo.getReturnInfo().getClazz(),methodInfo.getReturnInfo().getType());
-
-//        buildUrl(requestUriPrefix, requestUriSuffix)
-//        String content = ContentBuilder.newBuild().withRequestMethod(requestMethod).withRequestParam(param)
-//                .withRequestReturn(returnStr).withTitle(title).withRequestUriPrefix(methodInfo.getUriPrefix())
-//                .withRequestUriSuffix(methodInfo.getUrisSuffix())
-//                .withExample(resultJson)
-//                .build();
+        String reqJson = "";
+        PodamFactory podamFactory = initPodamFactory();
+        if (CollectionUtil.isNotEmpty(methodInfo.getParams())){
+            reqJson = getBeanJSon(podamFactory,methodInfo.getParams().get(0).getParamterClass(),null);
+        }
+        String respJson = getBeanJSon(podamFactory,methodInfo.getReturnInfo().getClazz(),methodInfo.getReturnInfo().getType());
         ContentBuilder contentBuilder = ContentBuilder.builder()
                 .requestMethod(requestMethod).reqParam(param)
                 .respVO(returnStr).title(title).requestUrl(buildUrl(methodInfo.getUriPrefix(), methodInfo.getUrisSuffix()))
@@ -298,8 +296,17 @@ class ControllerShowDocUtils {
         return showDocModel;
     }
 
-    private static String getBeanJSon(Class<?> clazz,Type genericReturnType){
+    private static PodamFactory initPodamFactory(){
+        CustomStringManufacturer customStringManufacturer = new CustomStringManufacturer();
+        CustomIntegerManufacturer customIntegerManufacturer = new CustomIntegerManufacturer();
         PodamFactory factory = new PodamFactoryImpl();
+        factory.getStrategy().addOrReplaceTypeManufacturer(String.class, customStringManufacturer);
+        factory.getStrategy().addOrReplaceTypeManufacturer(Integer.class, customIntegerManufacturer);
+        factory.getStrategy().setDefaultNumberOfCollectionElements(1);
+        return factory;
+    }
+
+    private static String getBeanJSon(PodamFactory factory,Class<?> clazz,Type genericReturnType){
         Object bean;
         if (genericReturnType instanceof ParameterizedTypeImpl) {
             bean = factory.manufacturePojo(clazz, ((ParameterizedTypeImpl) genericReturnType).getActualTypeArguments());

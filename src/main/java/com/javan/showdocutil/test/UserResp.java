@@ -3,7 +3,7 @@ package com.javan.showdocutil.test;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.util.List;
 
 @Data
 public class UserResp implements Serializable {
@@ -41,4 +41,14 @@ public class UserResp implements Serializable {
      * 允许登录
      */
     private Boolean active;
+
+    /**
+     * 版本号
+     */
+    private Integer version;
+
+    /**
+     * UserResp 用户信息
+     */
+    private List<UserResp> list;
 }

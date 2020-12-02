@@ -17,7 +17,7 @@ public class TestPost {
                         "86554fd751e6b15445d0b1e21d5caff219272901",
                         "6d40ed13bdde4af404d2b93283079604449302079")
                 .withConsolePrint()
-                .doWork(SystemUserController.class,"add");
+                .doWork(SystemUserController.class,"edit");
     }
 
     // todo 模板加载需要优化
