@@ -1,10 +1,15 @@
 package com.javan.showdocutil.test;
 
+import lombok.Getter;
+import lombok.Setter;
+
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
-public class User implements Serializable {
+public class User extends BaseReq {
     private static final long serialVersionUID = -5289620605557430832L;
 
     private static final String CMD = "GGG";
@@ -20,6 +25,7 @@ public class User implements Serializable {
     /**
      * 姓名
      */
+    @NotBlank
     private String nickname;
     /**
      * 手机号
@@ -53,6 +59,10 @@ public class User implements Serializable {
      * 开启接收超标短信
      */
     private Boolean enable_sms = true;
+
+    @Getter
+    @Setter
+    private List<String> list;
 
     public String getUser_name() {
         return user_name;

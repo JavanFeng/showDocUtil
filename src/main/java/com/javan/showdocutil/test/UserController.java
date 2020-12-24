@@ -31,7 +31,16 @@ public class UserController {
         return null;
     }
 
-
+    /**
+     * 编辑
+     *
+     * @param user 实体
+     * @return 结果
+     */
+    @PostMapping("/edit")
+    public ApiResponse<UserResp> edit(@Valid @RequestBody User user) {
+        return null;
+    }
 
     /**
      * 删除
@@ -42,10 +51,5 @@ public class UserController {
     @DeleteMapping("/delete/{id}")
     public String delete(@PathVariable("id") @NotNull(message = "id不能为空") Integer id) {
         return null;
-    }
-
-
-    public static void main(String[] args) throws Exception {
-        ShowDocWorkUtil.getInstance().withConsolePrint().doWork(UserController.class,"add");
     }
 }

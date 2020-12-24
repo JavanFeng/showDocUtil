@@ -1,6 +1,5 @@
 package com.javan.showdocutil.util;
 
-import com.alibaba.fastjson.JSONObject;
 import org.springframework.http.*;
 import org.springframework.util.Assert;
 import org.springframework.util.LinkedMultiValueMap;
@@ -9,11 +8,10 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.*;
 import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.util.Arrays;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * @Desc 远程调用
@@ -21,6 +19,10 @@ import java.util.List;
  * @Date 2019 06 2019/6/29 19:59
  */
 public class ShowDocWorkUtil {
+
+    private static final Logger logger = Logger.getLogger("ShowDocWorkUtil");
+
+    public static String API_HTTP_PREFIX = "http://";
 
     private static final String REMOTE_ADDRESS_PREFIX = "http://";
 
@@ -69,6 +71,11 @@ public class ShowDocWorkUtil {
      */
     public ShowDocWorkUtil withInCatalog(String catalog) {
         this.catalog = catalog;
+        return this;
+    }
+
+    public ShowDocWorkUtil withApiHttpPrefix(String apiHttpPrefix){
+        API_HTTP_PREFIX = apiHttpPrefix;
         return this;
     }
 
@@ -127,34 +134,27 @@ public class ShowDocWorkUtil {
     public void doWork(Class<?> controllerClass, String simpleMethodName) throws Exception {
         ShowDocModel text = ControllerShowDocUtils.getText(controllerClass, simpleMethodName);
         if (consolePrint) {
-            doConsolePrint(Arrays.asList(text));
+            doConsolePrint(Collections.singletonList(text));
         }
 
         if (updateRemote) {
-            doUpdateRemote(Arrays.asList(text));
+            doUpdateRemote(Collections.singletonList(text));
         }
     }
 
 
     private void doUpdateRemote(List<ShowDocModel> text) throws IOException {
         String urlStr = REMOTE_ADDRESS_PREFIX + remoteDodmin + addressSuffix;
-        String cata = catalog;
-        if (cata != null) {
-            if (!cata.endsWith("\\")) {
-                cata = cata + "\\";
-            }
-        } else {
-            cata = "";
-        }
+        String catalog = this.getCorrectCatalog();
         for (ShowDocModel showDocModel : text) {
-            String folder = cata + showDocModel.getFolder();
+            String folder = catalog + showDocModel.getFolder();
             String title = showDocModel.getTitle();
             String content = showDocModel.getContent();
             connect(urlStr, folder, title, content);
         }
     }
 
-    private void connect(String url, String folder, String title, String content) throws IOException {
+    private void connect(String url, String folder, String title, String content){
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         MultiValueMap<String, String> params = new LinkedMultiValueMap<String, String>();
@@ -162,19 +162,20 @@ public class ShowDocWorkUtil {
         params.add("api_token", apiToken);
         params.add("cat_name", folder);
         params.add("page_content", content);
-        params.add("title", title);
+        params.add("page_title", title);
+        logger.info("请求报文：" + params);
         HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(params, headers);
         ResponseEntity<String> response = TEMPLATE.exchange(url, HttpMethod.POST, requestEntity, String.class);
         HttpStatus statusCode = response.getStatusCode();
         if (statusCode == HttpStatus.OK) {
-            System.out.println("更新结果：" + response.getBody());
+            logger.info("更新结果：" + response.getBody());
         } else {
-            System.out.println("请求错误,HTTP_CODE:" + response.getStatusCodeValue() + ",信息：" + response.getBody());
+            logger.warning("请求错误,HTTP_CODE:" + response.getStatusCodeValue() + ",信息：" + response.getBody());
         }
     }
 
     private String convert2String(HttpURLConnection connection) throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8")); // 实例化输入流，并获取网页代码
+        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8)); // 实例化输入流，并获取网页代码
         String s; // 依次循环，至到读的值为空
         StringBuilder sb = new StringBuilder();
         while ((s = reader.readLine()) != null) {
@@ -185,14 +186,7 @@ public class ShowDocWorkUtil {
     }
 
     private void doConsolePrint(List<ShowDocModel> text) {
-        String cata = catalog;
-        if (cata != null) {
-            if (!cata.endsWith("\\")) {
-                cata = cata + "\\";
-            }
-        } else {
-            cata = "";
-        }
+        String catalog = this.getCorrectCatalog();
         for (ShowDocModel showDocModel : text) {
             String folder = catalog + showDocModel.getFolder();
             String title = showDocModel.getTitle();
@@ -203,5 +197,17 @@ public class ShowDocWorkUtil {
             System.out.println(content);
             System.out.println(System.lineSeparator());
         }
+    }
+
+    private String getCorrectCatalog(){
+        String cata = catalog;
+        if (cata != null) {
+            if (!cata.endsWith("/")) {
+                cata = cata + "/";
+            }
+        } else {
+            cata = "";
+        }
+        return cata;
     }
 }

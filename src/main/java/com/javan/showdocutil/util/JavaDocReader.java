@@ -1,5 +1,7 @@
 package com.javan.showdocutil.util;
 
+import cn.hutool.core.util.StrUtil;
+import com.javan.showdocutil.enums.ENParamType;
 import com.javan.showdocutil.model.*;
 import com.sun.javadoc.*;
 import com.sun.tools.javadoc.MethodDocImpl;
@@ -88,35 +90,16 @@ class JavaDocReader {
     }
 
     private static void addRequestReturn(MethodDoc method) throws Exception {
-
-        MethodDocImpl doc = (MethodDocImpl) method;
         // 方法名
         String methodName = method.qualifiedName();
         Type type = method.returnType();
         String typeName = type.qualifiedTypeName();
-
         StringBuilder builder = new StringBuilder();
-        String comment = "结果";
-        Tag[] returns = method.tags("return");
-        if (returns != null || returns.length != 0) {
-            comment = Arrays.stream(returns).map(Tag::text).collect(Collectors.joining(","));
-        }
-        // base type
-        builder.append("|");
-        builder.append("result");
-        builder.append("|");
-        builder.append("");
-        builder.append("|");
-        builder.append(BaseTypeUtil.getActualTypeName(type));
-        builder.append("|");
-        builder.append("结果");
-        builder.append("|");
-        builder.append("\r\n");
         if (!BaseTypeUtil.isBaseType(typeName)) {
             MethodInfo methodInfo = MethodInfoThreadLocal.get();
             MethodReturnInfo returnInfo = methodInfo.getReturnInfo();
             // TODO : 处理返回值的逻辑
-            doParseType(new Type[]{type}, builder, "", true, returnInfo, false);
+            doParseType(new Type[]{type}, builder, "", true, returnInfo, true, ENParamType.RESP);
         }
         METHOD_RETURN_MAP.put(methodName, builder.toString());
     }
@@ -181,32 +164,16 @@ class JavaDocReader {
     // 获取请求参数内容
     private static String getRequestParamText(Map<String, String> baseCn, Parameter[] parameters) throws Exception {
         StringBuilder builder = new StringBuilder();
-        // | 名称|是否必须 |类型 |备注 |
+        // | 编号 | 变量名 | 变量描述 | 类型 | 必填 | 备注 |
         MethodInfo methodInfo = MethodInfoThreadLocal.get();
         for (Parameter parameter : parameters) {
             String typeName = parameter.type().qualifiedTypeName();
-            // name
-            String name = parameter.name();
-            // comment
-            String comment = baseCn.getOrDefault(name, " ");
             Type type = parameter.type();
-            IParam paramByName = methodInfo.getParamByName(type.typeName());
-            // base type
-            builder.append("|");
-            builder.append(name);
-            builder.append("|");
-            builder.append(paramByName == null ? "" : (paramByName.getConstraint() == null) ? "" : paramByName.getConstraint().toString());
-            builder.append("|");
-            builder.append(BaseTypeUtil.getActualTypeName(parameter.type()));
-            builder.append("|");
-            builder.append(comment);
-            builder.append("|");
-            builder.append("\r\n");
             // other 属性
             if (!BaseTypeUtil.isBaseType(typeName)) {
                 // 需要进行append的文字
                 // Type type = parameter.type();
-                doParseType(new Type[]{type}, builder, null, true, methodInfo.getParamByName(type.typeName()), false);
+                doParseType(new Type[]{type}, builder, null, true, methodInfo.getParamByName(type.typeName()), false,ENParamType.REQ);
             }
         }
 
@@ -215,7 +182,7 @@ class JavaDocReader {
 
 
     static void doParseType(Type[] types, StringBuilder builder, String delimit,
-                            boolean noappend, IParam iParam, boolean newIParam) throws Exception {
+                            boolean noappend, IParam iParam, boolean newIParam,ENParamType paramType) throws Exception {
         if (delimit == null) {
             delimit = "";
         }
@@ -229,21 +196,47 @@ class JavaDocReader {
                 if (!noappend) {
                     appendNotBase(builder, type, delimit);
                 }
-                // 递归 TODO 泛型 所以對於iparm需要重新确认
-                doParseType(typesArguments,
-                        builder,
-                        delimit + PrefixMark.PREFIX,
-                        false,
-                        iParam, true);
+                if (typesArguments.length==0){
+                    //泛型指定类型为空 显示字段为空
+                    return;
+
+                    // 返回统一包装类字段
+//                    String modelText = JavaDocTextUtil.getModelText(type.qualifiedTypeName(), delimit + PrefixMark.PREFIX, iParam);
+//                    builder.append(modelText);
+                }else{
+                    if (StrUtil.isBlank(builder)){
+                        //首次视为data内容
+                        doParseType(typesArguments,
+                                builder,
+                                delimit + PrefixMark.PREFIX,
+                                false,
+                                iParam, newIParam,paramType);
+                    }else{
+                        // 递归
+                        StringBuilder ext = new StringBuilder();
+                        doParseType(typesArguments,
+                                ext,
+                                delimit + PrefixMark.PREFIX,
+                                false,
+                                iParam, newIParam,paramType);
+                        if (StrUtil.isNotBlank(ext)){
+                            Map<String,String> extMap = new HashMap<>();
+                            extMap.put("paramTypeName",paramType.getLabel());
+                            extMap.put("extParam",ext.toString());
+                            extMap.put("typeName", StrUtil.lowerFirst(typesArguments[0].simpleTypeName()));
+                            builder.append(GenerateFactory.generateExtContent(extMap));
+                        }
+                    }
+                }
             } else {
-                String newDelimit = null;
+                String newDelimit;
                 if (types.length > 1) {
                     if (delimit.length() == 0) {
                         newDelimit = PrefixMark.PREFIX + "[" + i + "] ";
                     } else {
                         newDelimit = delimit + "[" + i + "] ";
                     }
-                } else if (types.length == 1) {
+                } else {
                     if (delimit.length() == 0) {
                         newDelimit = PrefixMark.PREFIX;
                     } else {
@@ -259,11 +252,13 @@ class JavaDocReader {
                 }
                 // 结束
                 if (!BaseTypeUtil.isBaseType(type.qualifiedTypeName())) {
-                    // class model
-                    checkCycleParse(type.qualifiedTypeName());
+                    if (checkCycleParse(type.qualifiedTypeName())) {
+                        //循环体不打印
+                        return;
+                    }
                     try {
                         // may cycle
-                        String modelText = JavaDocTextUtil.getModelText(type.qualifiedTypeName(), newDelimit, newParam);
+                        String modelText = JavaDocTextUtil.getModelText(type.qualifiedTypeName(), newDelimit, newParam,paramType);
                         builder.append(modelText);
                     } finally {
                         // clear Set
@@ -281,23 +276,37 @@ class JavaDocReader {
         CLASS_CYCLE_SET.clear();
     }
 
-    private static void checkCycleParse(String qualifiedTypeName) {
+    private static boolean checkCycleParse(String qualifiedTypeName) {
         if (CLASS_CYCLE_SET.contains(qualifiedTypeName)) {
-            throw new IllegalArgumentException("不支持解析循环引用的实体[" + qualifiedTypeName + "]");
+            System.out.println("不支持解析循环引用的实体[" + qualifiedTypeName + "]");
+            return true;
         } else {
             CLASS_CYCLE_SET.add(qualifiedTypeName);
+            return false;
         }
     }
 
     private static void appendNotBase(StringBuilder builder, Type type, String delimit) {
         // base type
         builder.append("|");
-        builder.append(delimit);
+        builder.append(" ");
+        builder.append("|");
+        builder.append(" ");
+        builder.append("|");
+        String typeName = BaseTypeUtil.getActualTypeName(type);
+        if (BaseTypeUtil.isCollectionType(type.qualifiedTypeName())) {
+            Type[] types = type.asParameterizedType().typeArguments();
+            if (types.length !=0 && !BaseTypeUtil.isBaseType(types[0].qualifiedTypeName())){
+                typeName = types[0].typeName();
+            }
+        }
+        builder.append(typeName);
+        builder.append("|");
         builder.append(BaseTypeUtil.getActualTypeName(type));
         builder.append("|");
-        builder.append("y");
+        builder.append("是");
         builder.append("|");
-        builder.append(BaseTypeUtil.getActualTypeName(type));
+        builder.append(" ");
         builder.append("|");
         builder.append(" ");
         builder.append("|");
@@ -305,17 +314,18 @@ class JavaDocReader {
     }
 
     private static void appendSub(StringBuilder builder, Type ty, String delimit, IParam newParam) {
-        builder.append("|");
-        builder.append(delimit);
-        builder.append(ty.simpleTypeName());
-        builder.append("|");
-        builder.append(newParam == null ? "" : (newParam.getRequired()));
-        builder.append("|");
-        builder.append(ty.simpleTypeName());
-        builder.append("|");
-        builder.append(" ");
-        builder.append("|");
-        builder.append("\r\n");
+//        builder.append("|");
+//        builder.append("里面的内容");
+//        builder.append(ty.simpleTypeName());
+//        builder.append("|");
+//        builder.append(newParam == null ? "" : (newParam.getRequired()));
+//        builder.append("|");
+//        builder.append(ty.simpleTypeName());
+//        builder.append("|");
+//        builder.append(" ");
+//        builder.append("|");
+//        builder.append("\r\n");
+        return;
     }
 
     private static Type[] getTypes(Type type) {
