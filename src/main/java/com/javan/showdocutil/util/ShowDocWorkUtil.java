@@ -74,7 +74,7 @@ public class ShowDocWorkUtil {
         return this;
     }
 
-    public ShowDocWorkUtil withApiHttpPrefix(String apiHttpPrefix){
+    public ShowDocWorkUtil withApiHttpPrefix(String apiHttpPrefix) {
         API_HTTP_PREFIX = apiHttpPrefix;
         return this;
     }
@@ -144,7 +144,12 @@ public class ShowDocWorkUtil {
 
 
     private void doUpdateRemote(List<ShowDocModel> text) throws IOException {
-        String urlStr = REMOTE_ADDRESS_PREFIX + remoteDodmin + addressSuffix;
+        String urlStr;
+        if (remoteDodmin != null && remoteDodmin.contains("http")) {
+            urlStr = remoteDodmin + addressSuffix;
+        } else {
+            urlStr = REMOTE_ADDRESS_PREFIX + remoteDodmin + addressSuffix;
+        }
         String catalog = this.getCorrectCatalog();
         for (ShowDocModel showDocModel : text) {
             String folder = catalog + showDocModel.getFolder();
@@ -154,7 +159,7 @@ public class ShowDocWorkUtil {
         }
     }
 
-    private void connect(String url, String folder, String title, String content){
+    private void connect(String url, String folder, String title, String content) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         MultiValueMap<String, String> params = new LinkedMultiValueMap<String, String>();
@@ -199,7 +204,7 @@ public class ShowDocWorkUtil {
         }
     }
 
-    private String getCorrectCatalog(){
+    private String getCorrectCatalog() {
         String cata = catalog;
         if (cata != null) {
             if (!cata.endsWith("/")) {
