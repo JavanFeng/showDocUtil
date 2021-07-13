@@ -101,11 +101,21 @@ class JavaDocTextUtil {
             if (SERIAL_VERSION_UID.equals(name)){
                 continue;
             }
+            // add sprint and @deprecated
+            final Tag[] tags = field.tags();
+            final Tag sprintTag = TagsUtils.getSprintTag(tags);
+            if(sprintTag != null){
+                name = name+"<sup><font color='red'>"+sprintTag.name()+sprintTag.text()+"</font></sup>";
+            }
+            if(TagsUtils.hashDeprecatedTag(tags)){
+                name = "<s>"+name+"</s>";
+            }
             rowId++;
             String comment = field.commentText();
             Type type = field.type();
             String ty = field.type().qualifiedTypeName();
             String fieldFullName = field.qualifiedName();
+
             // 基础
             // base type
             builder.append("| ");
