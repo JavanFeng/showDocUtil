@@ -1,4 +1,4 @@
-package com.javan.showdocutil.util;
+package com.javan.showdocutil.docs.showdoc;
 
 
 /**
@@ -9,7 +9,7 @@ package com.javan.showdocutil.util;
  */
 public class ShowDocModel {
     /**
-     * 标题
+     * 目录
      */
     private String folder;
     /**

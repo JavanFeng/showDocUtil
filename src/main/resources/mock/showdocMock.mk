@@ -1,0 +1,17 @@
+{
+"name":"小明",
+"age":20,
+"company":"名国科技有限公司",
+"address":"中国浙江省嘉兴市",
+"remark":"备注",
+"userName":"xiaoming"
+}
+;
+{
+"code":"0",
+"msg":"操作成功",
+"info":"操作成功",
+"password":"******",
+"mobile":"13466765882"
+}
+;

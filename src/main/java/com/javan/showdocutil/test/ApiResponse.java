@@ -12,28 +12,21 @@ import java.util.Date;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T> implements Serializable {
-
+    /**
+     * @ignore
+     */
     private static final long serialVersionUID = -8990271803450171144L;
     private Boolean success = true;
+    /** 数据*/
     private T data;
     private Object additional_data;
     private Object related_objects;
+    /** 信息*/
     private String message;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date request_time = new Date();
     @JsonIgnore
     private Object attach;
-
-    private User user;
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
     /**
      * Gets the value of attach.
      *

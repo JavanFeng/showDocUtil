@@ -1,5 +1,7 @@
 package com.javan.showdocutil.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.annotation.Lookup;
@@ -26,7 +28,6 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Logger;
 
 /**
  * @Desc TODO
@@ -37,7 +38,7 @@ class ControllerClassPathScanner {
     /**
      * logger
      */
-    private static final Logger logger = Logger.getLogger("ControllerClassPathScanner");
+    private static final Logger logger = LoggerFactory.getLogger("ControllerClassPathScanner");
 
 
     static final String DEFAULT_RESOURCE_PATTERN = "**/*.class";
@@ -48,8 +49,6 @@ class ControllerClassPathScanner {
     private final List<TypeFilter> includeFilters = new LinkedList<TypeFilter>();
 
     private final List<TypeFilter> excludeFilters = new LinkedList<TypeFilter>();
-
-    private Environment environment;
 
     private final ConfigurablePropertyResolver propertyResolver =
             new PropertySourcesPropertyResolver(new MutablePropertySources());

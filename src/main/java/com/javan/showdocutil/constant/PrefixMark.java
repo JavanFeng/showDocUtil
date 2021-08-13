@@ -1,11 +1,14 @@
-package com.javan.showdocutil.util;
+package com.javan.showdocutil.constant;
 
 /**
  * @Desc TODO
  * @Author Javan Feng
  * @Date 2019 06 2019/6/29 19:18
  */
-class PrefixMark {
+public class PrefixMark {
 
     public static String PREFIX = "↪";
+
+    private PrefixMark() {
+    }
 }

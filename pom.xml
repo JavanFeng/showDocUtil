@@ -11,7 +11,7 @@
 
     <groupId>com.github.JavanFeng</groupId>
     <artifactId>showDocUtil</artifactId>
-    <version>0.0.1-beta</version>
+    <version>0.0.5-beta</version>
     <name>showDocUtil</name>
     <url>https://github.com/JavanFeng/showDocUtil</url>
     <description>showdoc util project for Spring Boot</description>
@@ -44,6 +44,10 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
             <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-freemarker</artifactId>
         </dependency>
         <dependency>
             <groupId>com.sun</groupId>

@@ -1,19 +1,15 @@
-package com.javan.showdocutil.util;
+package com.javan.showdocutil.docs.showdoc;
 
-import com.alibaba.fastjson.JSONObject;
 import org.springframework.http.*;
 import org.springframework.util.Assert;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.List;
+
+import static com.javan.showdocutil.docs.showdoc.ShowDocConfiguration.*;
 
 /**
  * @Desc 远程调用
@@ -22,45 +18,32 @@ import java.util.List;
  */
 public class ShowDocWorkUtil {
 
-    private static final String REMOTE_ADDRESS_PREFIX = "http://";
-
-    private static final String REMOTE_ADDRESS_SUFFIX_1 = "/server/index.php?s=/api/item/updateByApi";
-
-    private static final String REMOTE_ADDRESS_SUFFIX_2 = "/server/api/item/updateByApi";
-
-    private static final String OFFICAL_DOMAIN = "www.showdoc.cc";
-    private static final String OFFICAL_DOMAIN2 = "www.showdoc.com.cn";
+    private final ShowDocConfiguration baseConfiguration;
 
     private static final RestTemplate TEMPLATE = new RestTemplate();
-    /**
-     * 控制台打印
-     */
-    private boolean consolePrint = false;
-    /**
-     * 更新远程showdoc
-     */
-    private boolean updateRemote = false;
 
-    private String addressSuffix;
-
-    /**
-     * 更新远程, catalog : 目录1/目录2/
-     */
-    private String remoteDodmin, apiKey, apiToken, catalog;
-
-    private ShowDocWorkUtil() {
+    private ShowDocWorkUtil(ShowDocConfiguration config) {
+        Assert.notNull(config, "config must not be null");
+        baseConfiguration = config;
     }
 
+    public static ShowDocWorkUtil getInstance(ShowDocConfiguration config) {
+        return new ShowDocWorkUtil(config);
+    }
 
     public static ShowDocWorkUtil getInstance() {
-        return new ShowDocWorkUtil();
+        return new ShowDocWorkUtil(new ShowDocConfiguration());
     }
 
     public ShowDocWorkUtil withConsolePrint() {
-        consolePrint = true;
+        baseConfiguration.setConsolePrint(true);
         return this;
     }
 
+    public ShowDocWorkUtil withApiHttpPrefix(String prefix){
+        baseConfiguration.setApiCommonAddress(prefix);
+        return this;
+    }
     /**
      * 目录
      *
@@ -68,7 +51,7 @@ public class ShowDocWorkUtil {
      * @return
      */
     public ShowDocWorkUtil withInCatalog(String catalog) {
-        this.catalog = catalog;
+        baseConfiguration.setCatalog(catalog);
         return this;
     }
 
@@ -76,32 +59,32 @@ public class ShowDocWorkUtil {
         Assert.hasText(domain, "domian must not be null");
         Assert.hasText(apiKey, "apiKey must not be null");
         Assert.hasText(apiToken, "apiToken must not be null");
-        updateRemote = true;
+        baseConfiguration.setUpdateRemote(true);
         setDomain(domain);
-        this.apiKey = apiKey;
-        this.apiToken = apiToken;
+        baseConfiguration.setApiKey(apiKey);
+        baseConfiguration.setApiToken(apiToken);
         return this;
     }
 
     private void setDomain(String domain) {
         if (OFFICAL_DOMAIN.equals(domain) || OFFICAL_DOMAIN2.equals(domain)) {
-            addressSuffix = REMOTE_ADDRESS_SUFFIX_2;
+            baseConfiguration.setAddressSuffix(REMOTE_ADDRESS_SUFFIX_2);
         } else {
-            addressSuffix = REMOTE_ADDRESS_SUFFIX_1;
+            baseConfiguration.setAddressSuffix(REMOTE_ADDRESS_SUFFIX_1);
         }
-        this.remoteDodmin = domain;
+        baseConfiguration.setRemoteDomain(domain);
     }
 
     /**
      * 基础包，扫描下面所有的controller层
      **/
     public void doWork(String basePackage) throws Exception {
-        List<ShowDocModel> text = ControllerShowDocUtils.getText(basePackage);
-        if (consolePrint) {
+        List<ShowDocModel> text = ControllerShowDocUtils.getText(basePackage,baseConfiguration);
+        if (baseConfiguration.isConsolePrint()) {
             doConsolePrint(text);
         }
 
-        if (updateRemote) {
+        if (baseConfiguration.isUpdateRemote()) {
             doUpdateRemote(text);
         }
     }
@@ -111,12 +94,12 @@ public class ShowDocWorkUtil {
      * 扫描controller类
      **/
     public void doWork(Class<?> controllerClass) throws Exception {
-        List<ShowDocModel> text = ControllerShowDocUtils.getText(controllerClass);
-        if (consolePrint) {
+        List<ShowDocModel> text = ControllerShowDocUtils.getText(controllerClass,baseConfiguration);
+        if (baseConfiguration.isConsolePrint()) {
             doConsolePrint(text);
         }
 
-        if (updateRemote) {
+        if (baseConfiguration.isUpdateRemote()) {
             doUpdateRemote(text);
         }
     }
@@ -125,44 +108,44 @@ public class ShowDocWorkUtil {
      * 扫描controller类中的public 类
      **/
     public void doWork(Class<?> controllerClass, String simpleMethodName) throws Exception {
-        ShowDocModel text = ControllerShowDocUtils.getText(controllerClass, simpleMethodName);
-        if (consolePrint) {
+        ShowDocModel text = ControllerShowDocUtils.getText(controllerClass, simpleMethodName,baseConfiguration);
+        if (baseConfiguration.isConsolePrint()) {
             doConsolePrint(Arrays.asList(text));
         }
 
-        if (updateRemote) {
+        if (baseConfiguration.isUpdateRemote()) {
             doUpdateRemote(Arrays.asList(text));
         }
     }
 
 
-    private void doUpdateRemote(List<ShowDocModel> text) throws IOException {
-        String urlStr = REMOTE_ADDRESS_PREFIX + remoteDodmin + addressSuffix;
-        String cata = catalog;
-        if (cata != null) {
-            if (!cata.endsWith("\\")) {
-                cata = cata + "\\";
-            }
+    private void doUpdateRemote(List<ShowDocModel> text) {
+        String urlStr;
+        String remoteDomin = baseConfiguration.getRemoteDomain();
+        final String addressSuffix = baseConfiguration.getAddressSuffix();
+        if (remoteDomin != null && remoteDomin.contains("http")) {
+            urlStr = remoteDomin + addressSuffix;
         } else {
-            cata = "";
+            urlStr = REMOTE_ADDRESS_PREFIX + remoteDomin + addressSuffix;
         }
+        String catalog = this.getCorrectCatalog();
         for (ShowDocModel showDocModel : text) {
-            String folder = cata + showDocModel.getFolder();
+            String folder = catalog + showDocModel.getFolder();
             String title = showDocModel.getTitle();
             String content = showDocModel.getContent();
             connect(urlStr, folder, title, content);
         }
     }
 
-    private void connect(String url, String folder, String title, String content) throws IOException {
+    private void connect(String url, String folder, String title, String content) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<String, String>();
-        params.add("api_key", apiKey);
-        params.add("api_token", apiToken);
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("api_key", baseConfiguration.getApiKey());
+        params.add("api_token", baseConfiguration.getApiToken());
         params.add("cat_name", folder);
         params.add("page_content", content);
-        params.add("title", title);
+        params.add("page_title", title);
         HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(params, headers);
         ResponseEntity<String> response = TEMPLATE.exchange(url, HttpMethod.POST, requestEntity, String.class);
         HttpStatus statusCode = response.getStatusCode();
@@ -173,26 +156,9 @@ public class ShowDocWorkUtil {
         }
     }
 
-    private String convert2String(HttpURLConnection connection) throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8")); // 实例化输入流，并获取网页代码
-        String s; // 依次循环，至到读的值为空
-        StringBuilder sb = new StringBuilder();
-        while ((s = reader.readLine()) != null) {
-            sb.append(s);
-        }
-        reader.close();
-        return sb.toString();
-    }
 
     private void doConsolePrint(List<ShowDocModel> text) {
-        String cata = catalog;
-        if (cata != null) {
-            if (!cata.endsWith("\\")) {
-                cata = cata + "\\";
-            }
-        } else {
-            cata = "";
-        }
+        String catalog = this.getCorrectCatalog();
         for (ShowDocModel showDocModel : text) {
             String folder = catalog + showDocModel.getFolder();
             String title = showDocModel.getTitle();
@@ -203,5 +169,22 @@ public class ShowDocWorkUtil {
             System.out.println(content);
             System.out.println(System.lineSeparator());
         }
+    }
+
+
+    private String getCorrectCatalog() {
+        String cata = baseConfiguration.getCatalog();
+        if (cata != null) {
+            if (!cata.endsWith("/")) {
+                cata = cata + "/";
+            }
+        } else {
+            cata = "";
+        }
+        return cata;
+    }
+
+    public ShowDocConfiguration getBaseConfiguration() {
+        return baseConfiguration;
     }
 }

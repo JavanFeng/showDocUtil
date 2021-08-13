@@ -3,16 +3,21 @@ package com.javan.showdocutil.test;
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 public class User implements Serializable {
+    /**
+     * @ignore
+     */
     private static final long serialVersionUID = -5289620605557430832L;
 
     private static final String CMD = "GGG";
 
     /**
      * 用户名
+     * @sprint 11
      */
-    private String user_name;
+    private Object user_name;
     /**
      * 密码
      */
@@ -30,10 +35,7 @@ public class User implements Serializable {
      * 地址
      */
     private String address;
-    /**
-     * 单位
-     */
-    private String company;
+
     /**
      * 备注
      */
@@ -44,7 +46,24 @@ public class User implements Serializable {
     private Boolean active;
 
     private String activeName;
+    /**孩子名列表
+     * @deprecated
+     * */
+    private List<String> childrenList;
+    /**
+     * 测试列表
+     * @sprint 12
+     * */
+    private List testArray;
+    /**
+     * 单位
+     */
+//    private Company<String> company;
 
+    /**
+     *  单位列表
+     */
+//    private List<Company<User>> companyList;
     /**
      * 上次登录时间
      */
@@ -54,7 +73,7 @@ public class User implements Serializable {
      */
     private Boolean enable_sms = true;
 
-    public String getUser_name() {
+    public Object getUser_name() {
         return user_name;
     }
 
@@ -94,13 +113,6 @@ public class User implements Serializable {
         this.address = address;
     }
 
-    public String getCompany() {
-        return company;
-    }
-
-    public void setCompany(String company) {
-        this.company = company;
-    }
 
     public String getRemark() {
         return remark;
@@ -149,4 +161,32 @@ public class User implements Serializable {
     public static String getCMD() {
         return CMD;
     }
+
+    public void setUser_name(Object user_name) {
+        this.user_name = user_name;
+    }
+
+    public List<String> getChildrenList() {
+        return childrenList;
+    }
+
+    public void setChildrenList(List<String> childrenList) {
+        this.childrenList = childrenList;
+    }
+
+    public List getTestArray() {
+        return testArray;
+    }
+
+    public void setTestArray(List testArray) {
+        this.testArray = testArray;
+    }
+
+//    public List<Company<User>> getCompanyList() {
+//        return companyList;
+//    }
+//
+//    public void setCompanyList(List<Company<User>> companyList) {
+//        this.companyList = companyList;
+//    }
 }

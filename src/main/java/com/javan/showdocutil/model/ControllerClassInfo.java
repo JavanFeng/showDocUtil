@@ -4,21 +4,13 @@ import java.util.List;
 
 public class ControllerClassInfo {
 
-    private List<MethodInfo> list;
+    private List<String> methodNameList;
 
     private Class<?> controllerClazz;
 
-    public ControllerClassInfo(List<MethodInfo> list, Class<?> controllerClazz) {
-        this.list = list;
+    public ControllerClassInfo(List<String> methodNameList, Class<?> controllerClazz) {
+        this.methodNameList = methodNameList;
         this.controllerClazz = controllerClazz;
-    }
-
-    public List<MethodInfo> getList() {
-        return list;
-    }
-
-    public void setList(List<MethodInfo> list) {
-        this.list = list;
     }
 
     public Class<?> getControllerClazz() {
@@ -29,11 +21,11 @@ public class ControllerClassInfo {
         this.controllerClazz = controllerClazz;
     }
 
-    // TODO: 简单判断 -——》之后应该加上参数 重载
-    public MethodInfo getMethodByMethodName(String name) {
-        if (list == null) {
-            return null;
-        }
-       return list.stream().filter(m -> m.getMethod().getName().equals(name)).findFirst().orElse(null);
+    public List<String> getMethodNameList() {
+        return methodNameList;
+    }
+
+    public void setMethodNameList(List<String> methodNameList) {
+        this.methodNameList = methodNameList;
     }
 }
