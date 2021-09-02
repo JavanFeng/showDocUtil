@@ -2,6 +2,7 @@ package com.javan.showdocutil.util;
 
 import com.sun.javadoc.ParameterizedType;
 import com.sun.javadoc.Type;
+import org.springframework.web.multipart.MultipartFile;
 import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl;
 
 import java.math.BigDecimal;
@@ -51,6 +52,7 @@ public class BaseTypeUtil {
         BASETYPESET.addAll(PRIMARY_MAP.keySet());
         BASETYPESET.add(LocalDate.class.getName());
         BASETYPESET.add(LocalDateTime.class.getName());
+        BASETYPESET.add(MultipartFile.class.getName());
         //
         COLLECTIONS_TYPE.put(List.class.getName(), "array");
         COLLECTIONS_TYPE.put(Set.class.getName(), "array");
@@ -171,6 +173,10 @@ public class BaseTypeUtil {
         return PRIMARY_MAP.get(typeName);
     }
 
+    /** 添加基础类型*/
+    public static boolean addBaseType(String typeName){
+        return BASETYPESET.add(typeName);
+    }
 
     private BaseTypeUtil() {
     }

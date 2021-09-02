@@ -11,6 +11,7 @@ import com.javan.showdocutil.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.MediaType;
 import org.springframework.util.ClassUtils;
 import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl;
 import uk.co.jemos.podam.api.AttributeMetadata;
@@ -101,7 +102,7 @@ public class ControllerShowDocUtils {
             PodamFactory podamFactory = initPodamFactory();
             // todo 默认先实现单个为json吧，多
             final Method method = methodDomain.getMethod();
-            String reqExample = buildReqParamExample(requestMethod, podamFactory, method);
+            String reqExample = buildReqParamExample(requestMethod, podamFactory, method,request);
             final String respExample = doBuildReturnExample(podamFactory, method);
             ContentBuilder contentBuilder = ContentBuilder.newBuild()
                     .withRequestMethod(requestMethod)
@@ -290,6 +291,7 @@ public class ControllerShowDocUtils {
     }
 
     private static String doBuildReturnExample(PodamFactory podamFactory, Method method) {
+        // todo 这边默认都是json
         final Type returnType = method.getGenericReturnType();
         Type[] types;
         if (returnType instanceof ParameterizedTypeImpl) {
@@ -302,7 +304,8 @@ public class ControllerShowDocUtils {
         return bean == null ? "" : s;
     }
 
-    private static String buildReqParamExample(String requestMethod, PodamFactory podamFactory, Method method) {
+    private static String buildReqParamExample(String requestMethod, PodamFactory podamFactory, Method method, RequestDomain request) {
+      // 简单实现
         StringBuilder reqJson = new StringBuilder();
         final Parameter[] parameters = method.getParameters();
         if (parameters != null && parameters.length != 0) {
@@ -317,7 +320,7 @@ public class ControllerShowDocUtils {
                 }
                 Object bean = podamFactory.manufacturePojo(type, types);
                 if (type.isPrimitive() || BaseTypeUtil.isBaseType(type.getTypeName())) {
-                    if (!requestMethod.contains("POST")) {
+                    if (!requestMethod.contains("POST") || isNotJson(request)) {
                         reqJson.append(parameter.getName());
                         reqJson.append(" : ");
                         reqJson.append(bean);
@@ -331,11 +334,21 @@ public class ControllerShowDocUtils {
                         reqJson.append("}");
                     }
                 } else {
-                    if (!requestMethod.contains("POST")) {
-                        reqJson.append(parameter.getName());
-                        reqJson.append(" : ");
-                        reqJson.append(JSON.toJSONString(bean, SerializerFeature.WriteMapNullValue,SerializerFeature.PrettyFormat));
-                        reqJson.append(System.lineSeparator());
+                    if (!requestMethod.contains("POST") || isNotJson(request)) {
+                        if(!isNotJson(request)) {
+                            reqJson.append(parameter.getName());
+                            reqJson.append(" : ");
+                            reqJson.append(JSON.toJSONString(bean, SerializerFeature.WriteMapNullValue, SerializerFeature.PrettyFormat));
+                            reqJson.append(System.lineSeparator());
+                        }else{
+                            Map mapTypes = JSON.parseObject(JSON.toJSONString(bean, SerializerFeature.WriteMapNullValue));
+                            mapTypes.forEach((key, value) -> {
+                                reqJson.append(key);
+                                reqJson.append(" : ");
+                                reqJson.append(value);
+                                reqJson.append(System.lineSeparator());
+                            });
+                        }
                     } else {
                         reqJson.append(JSON.toJSONString(bean, SerializerFeature.WriteMapNullValue,SerializerFeature.PrettyFormat));
                     }
@@ -349,6 +362,14 @@ public class ControllerShowDocUtils {
 
         }
         return reqJson.toString();
+    }
+
+    private static boolean isNotJson(RequestDomain request) {
+        if (request.getConsumes() == null) {
+            return false;
+        }
+
+        return !request.getConsumes().contains("json");
     }
 
     private static PodamFactory initPodamFactory() {
